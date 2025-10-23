@@ -9,7 +9,7 @@ from tool import (
 import os
 import json
 from datetime import datetime
-from langchain.schema import Document
+from langchain_core.documents import Document
 load_dotenv()
 
 def process_user_query(user_query: str) -> str:
@@ -31,12 +31,7 @@ def process_user_query(user_query: str) -> str:
             print("Đang tìm kiếm trên Tiki...")
             tiki_products = crawl_tiki_product(product_name)
             
-            if tiki_products:
-                print(f"\nĐã tìm thấy {len(tiki_products)} sản phẩm từ Tiki:")
-                # Log crawled products
-                for idx, product in enumerate(tiki_products, 1):
-                    print(f"{idx}. {product['name']} - {product['price']:,} VNĐ")
-                
+            if tiki_products:              
                 print("\nĐang xử lý song song:")
                 print("- Cập nhật cơ sở dữ liệu")
                 print("- Phân tích và so sánh giá")

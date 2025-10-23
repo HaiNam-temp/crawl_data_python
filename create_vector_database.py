@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Dict
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
-from langchain.schema import Document
+from langchain_core.documents import Document
 
 PRODUCTS_JSON_PATH = "data/tiki_products_user_keywords.json"
 PRODUCTS_CHROMA_PATH = "chroma_data"
@@ -22,8 +22,6 @@ def create_documents_from_products(products: List[Dict]) -> List[Document]:
     for product in products:
         # Convert product dict to string for embedding
         product_text = json.dumps(product, ensure_ascii=False)
-        
-        # Create Document object with metadata
         doc = Document(
             page_content=product_text,
             metadata={
@@ -37,7 +35,6 @@ def create_documents_from_products(products: List[Dict]) -> List[Document]:
     return documents
 
 def initialize_vector_store():
-    """Initialize and populate vector store with product data"""
     try:
         # Load product data
         products = load_products_from_json()

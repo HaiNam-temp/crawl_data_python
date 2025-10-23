@@ -3,3 +3,11 @@ requests
 fastapi
 uvicorn
 pydantic
+python-dotenv
+openai
+langchain
+langchain-core
+langchain-openai
+langchain-chroma
+langchain-community
+chromadb
