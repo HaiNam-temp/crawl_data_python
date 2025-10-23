@@ -1,0 +1,12 @@
+{
+"tiki": {
+    "url": "https://tiki.vn/api/v2/products?q={}&page={}",
+    "selectors": {
+      "list": "div.product-item",
+      "title": "a.product-title",
+      "price": ".price",
+      "link": "a.product-link",
+      "seller": ""
+    }
+  }
+}
