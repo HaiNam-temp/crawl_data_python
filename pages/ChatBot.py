@@ -1,6 +1,14 @@
+import datetime
 import streamlit as st
 import sqlite3
 from data import search_products # Bot cũng cần biết tìm kiếm
+from logger_config import get_logger
+
+logger = get_logger(__name__)
+from logger_config import get_logger
+
+
+logger = get_logger(__name__)
 
 # --- 1. THIẾT LẬP CƠ SỞ DỮ LIỆU (SQLITE) ---
 
@@ -63,31 +71,40 @@ def save_message_to_db(role, content):
 # --- 2. LOGIC CỦA BOT (Giữ nguyên) ---
 
 def generate_bot_response(user_input):
-    query = user_input.lower()
-    bot_reply = "Xin lỗi, tôi chưa hiểu ý bạn. Bạn có thể hỏi cụ thể hơn về tên sản phẩm được không?"
+    logger.info(f"User query: {user_input}")
+    try:
+        from chatbot import process_user_query
 
-    if "iphone 15" in query:
-        products = search_products("iphone 15")
-        if products:
-            bot_reply = "Tôi tìm thấy các sản phẩm iPhone 15 sau:\n\n"
-            for p in products:
-                bot_reply += f"- {p['name']} tại {p['vendor']}\n  Giá: {p['price']:,} ₫\n\n"
-        else:
-            bot_reply = "Rất tiếc, tôi không tìm thấy sản phẩm iPhone 15 nào."
-            
-    elif "tai nghe" in query or "baseus" in query:
-        products = search_products("baseus")
-        if products:
-            bot_reply = "Tôi tìm thấy các tai nghe Baseus sau:\n\n"
-            for p in products:
-                bot_reply += f"- {p['name']} tại {p['vendor']}\n  Giá: {p['price']:,} ₫\n\n"
-        else:
-            bot_reply = "Rất tiếc, tôi không tìm thấy tai nghe Baseus nào."
-            
-    elif "chào" in query or "hello" in query:
-        bot_reply = "Chào bạn, tôi là Trợ lý Giá cả. Bạn cần tìm gì nào?"
+        # process_user_query returns a string response ready to show in UI
+        return process_user_query(user_input)
+    except Exception:
+        # Fallback: simple local heuristic bot when the full chatbot isn't
+        # available (e.g., missing dependencies in the environment).
+        query = user_input.lower()
+        bot_reply = "Xin lỗi, tôi chưa hiểu ý bạn. Bạn có thể hỏi cụ thể hơn về tên sản phẩm được không?"
 
-    return bot_reply
+        if "iphone 15" in query:
+            products = search_products("iphone 15")
+            if products:
+                bot_reply = "Tôi tìm thấy các sản phẩm iPhone 15 sau:\n\n"
+                for p in products:
+                    bot_reply += f"- {p['name']} tại {p['vendor']}\n  Giá: {p['price']:,} ₫\n\n"
+            else:
+                bot_reply = "Rất tiếc, tôi không tìm thấy sản phẩm iPhone 15 nào."
+
+        elif "tai nghe" in query or "baseus" in query:
+            products = search_products("baseus")
+            if products:
+                bot_reply = "Tôi tìm thấy các tai nghe Baseus sau:\n\n"
+                for p in products:
+                    bot_reply += f"- {p['name']} tại {p['vendor']}\n  Giá: {p['price']:,} ₫\n\n"
+            else:
+                bot_reply = "Rất tiếc, tôi không tìm thấy tai nghe Baseus nào."
+
+        elif "chào" in query or "hello" in query:
+            bot_reply = "Chào bạn, tôi là Trợ lý Giá cả. Bạn cần tìm gì nào?"
+
+        return bot_reply
 
 # --- 3. GIAO DIỆN CHAT STREAMLIT ---
 
@@ -112,6 +129,7 @@ for message in st.session_state.messages:
 # --- Khung nhập liệu (Xử lý tin nhắn mới) ---
 if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
     # 1. Thêm tin nhắn USER vào session_state (để hiển thị) và DB (để lưu)
+    logger.info("Received prompt from user: %r", prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
     save_message_to_db("user", prompt)
     
@@ -123,7 +141,12 @@ if prompt := st.chat_input("Nhập câu hỏi của bạn..."):
     # (Thêm hiệu ứng "Đang suy nghĩ..." cho chuyên nghiệp)
     with st.chat_message("assistant"):
         with st.spinner("Đang suy nghĩ..."):
-            bot_response = generate_bot_response(prompt)
+            try:
+                bot_response = generate_bot_response(prompt)
+                logger.info("Bot response generated (len=%d)", len(bot_response) if bot_response else 0)
+            except Exception as e:
+                logger.error("Error generating bot response: %s", str(e))
+                bot_response = "Xin lỗi, đã có lỗi khi tạo phản hồi."
         st.markdown(bot_response)
     
     # 3. Thêm tin nhắn BOT vào session_state (để hiển thị) và DB (để lưu)

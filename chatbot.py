@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from logger_config import get_logger
 from tool import (
     chat_model,
     product_search_chain,
@@ -11,9 +12,9 @@ import json
 from datetime import datetime
 from langchain_core.documents import Document
 load_dotenv()
-
+logger = get_logger(__name__)
 def process_user_query(user_query: str) -> str:
-    """Process user query and return appropriate response"""
+    logger.info(f"User query: {user_query}")
     try:
         # Extract product name from query using basic text cleaning
         product_name = user_query.lower()
@@ -21,21 +22,16 @@ def process_user_query(user_query: str) -> str:
             product_name = product_name.replace(term, "")
         product_name = product_name.strip()
         
-        print("\nĐang tìm kiếm trong cơ sở dữ liệu...")
-        # First try to find product in vector database
-        search_result = product_search_chain.invoke({"question": product_name})
+        
+
+        search_result = product_search_chain({"question": product_name})
         
         # If no relevant results found in vector database, crawl from Tiki
         if "tôi sẽ tìm kiếm" in search_result.lower():
-            print(f"\nSản phẩm '{product_name}' chưa có trong cơ sở dữ liệu.")
-            print("Đang tìm kiếm trên Tiki...")
+            logger.info(f"Search result: {search_result}")
             tiki_products = crawl_tiki_product(product_name)
             
-            if tiki_products:              
-                print("\nĐang xử lý song song:")
-                print("- Cập nhật cơ sở dữ liệu")
-                print("- Phân tích và so sánh giá")
-                
+            if tiki_products:                         
                 # Start price comparison immediately with crawled data
                 context_data = json.dumps(tiki_products, ensure_ascii=False)
                 try:
@@ -46,7 +42,7 @@ def process_user_query(user_query: str) -> str:
                     if not comparison_result:
                         comparison_result = "Xin lỗi, không thể phân tích giá sản phẩm lúc này."
                 except Exception as e:
-                    print(f"\nLỗi khi phân tích giá: {str(e)}")
+                    logger.error(f"Error during price comparison: {str(e)}")
                     comparison_result = "Xin lỗi, có lỗi xảy ra khi phân tích giá sản phẩm."
                 
                 # Add new products to vector database
@@ -71,11 +67,11 @@ def process_user_query(user_query: str) -> str:
                     
                     # Add documents to vector store
                     products_vector_db.add_documents(documents)
-                    print("\nĐã cập nhật thành công vào cơ sở dữ liệu!")
+                    logger.info("Updated vector database with new products.")
                 except Exception as e:
-                    print(f"\nLỗi khi cập nhật cơ sở dữ liệu: {str(e)}")
-                    print("Dữ liệu tìm kiếm vẫn được phân tích nhưng có thể không được lưu trữ")
-                
+                    logger.error(f"Error updating vector database: {str(e)}")
+                    logger.warning("Search data was processed but may not be stored.")
+
                 return comparison_result
             else:
                 return "Xin lỗi, tôi không tìm thấy thông tin về sản phẩm này trên Tiki. Vui lòng thử lại với từ khóa khác."
@@ -83,7 +79,7 @@ def process_user_query(user_query: str) -> str:
         return search_result
         
     except Exception as e:
-        print(f"Error processing query: {str(e)}")
+        logger.error(f"Error processing query: {str(e)}")
         return "Xin lỗi, đã có lỗi xảy ra khi xử lý yêu cầu của bạn."
 
 def chat_loop():
@@ -126,5 +122,3 @@ def chat_loop():
 
 if __name__ == "__main__":
     chat_loop()
-
-

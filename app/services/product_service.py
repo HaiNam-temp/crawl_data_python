@@ -2,7 +2,7 @@ from typing import List, Dict
 import threading
 import os
 from app.repositories.product_repository import save_products, load_products
-from crawl_iphones import crawl, load_shops
+from Crawl_Data.crawl_iphones import crawl, load_shops
 
 
 def get_products(file_name: str, limit: int = 0, offset: int = 0) -> Dict:

@@ -12,6 +12,8 @@ from datetime import datetime
 import dotenv
 import os
 dotenv.load_dotenv()
+from logger_config import get_logger
+logger = get_logger(__name__)
 # Initialize ChatOpenAI
 chat_model = ChatOpenAI(
     model="gpt-5",
@@ -34,146 +36,9 @@ products_vector_db = Chroma(
 )
 products_retriever = products_vector_db.as_retriever(search_type="similarity", search_kwargs={"k": 5})
 
-# Tiki API configuration
-TIKI_API_URL = "https://tiki.vn/api/v2/products"
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-}
-
-def create_chain_with_template(system_template: str, human_template: str = "{question}"):
-    """Helper function to create a chain with given templates"""
-    # Create base prompts
-    system_message_prompt = SystemMessagePromptTemplate(
-        prompt=PromptTemplate(
-            input_variables=["context"],
-            template=system_template
-        )
-    )
-    
-    human_message_prompt = HumanMessagePromptTemplate(
-        prompt=PromptTemplate(
-            input_variables=["question"],
-            template=human_template
-        )
-    )
-    
-    chat_prompt = ChatPromptTemplate(
-        messages=[system_message_prompt, human_message_prompt]
-    )
-
-    # For product search (using vector retriever)
-    if "Tôi sẽ tìm kiếm" in system_template:
-        return (
-            {
-                "context": itemgetter("question") | products_retriever,
-                "question": itemgetter("question"),
-            }
-            | chat_prompt
-            | chat_model
-            | StrOutputParser()
-        )
-    
-    # For price comparison (using direct context)
-    else:
-        from langchain_classic.chains import LLMChain
-        
-        chain = LLMChain(
-            llm=chat_model,
-            prompt=chat_prompt,
-            verbose=False
-        )
-        
-        def process_chain(inputs: dict) -> str:
-            try:
-                result = chain.invoke(inputs)
-                return result["text"] if isinstance(result, dict) else str(result)
-            except Exception as e:
-                raise ValueError(f"Error processing chain: {str(e)}")
-        
-        return process_chain
-
-# Function to crawl product data from Tiki
-def crawl_tiki_product(product_name: str) -> List[Dict]:
-    """
-    Crawl product information from Tiki API and process it directly
-    Returns a list of processed products ready for vector database and analysis
-    """
-    params = {
-        "q": product_name,
-        "limit": 20,  # Increased for better coverage
-        "sort": "score,price,asc",  # Sort by relevance and price
-        "aggregations": 1
-    }
-    
-    try:
-        response = requests.get(TIKI_API_URL, headers=headers, params=params)
-        if response.status_code == 200:
-            data = response.json()
-            products = []
-            current_time = datetime.now().isoformat()
-            
-            for idx, item in enumerate(data.get("data", []), 1):
-                # Skip invalid or incomplete products
-                required_fields = ["name", "price", "url_path"]
-                if not all(item.get(field) for field in required_fields):
-                    continue
-                
-                # Process price information
-                current_price = item.get('price', 0)
-                original_price = item.get('original_price', current_price)
-                discount_rate = item.get('discount_rate', 0)
-                
-                # Process seller information
-                seller_info = item.get("seller", {})
-                seller_name = seller_info.get("name", item.get("seller_name", "Unknown Seller"))
-                
-                # Create unique product ID
-                product_id = f"tiki_{int(datetime.now().timestamp())}_{idx}"
-                
-                # Build product information dictionary
-                product = {
-                    "id": product_id,  # Add unique ID
-                    "name": item.get("name").strip(),
-                    "price": current_price,
-                    "original_price": original_price,
-                    "price_display": f"{current_price:,.0f} VNĐ",
-                    "original_price_display": f"{original_price:,.0f} VNĐ",
-                    "discount": f"-{discount_rate}%" if discount_rate > 0 else "Không giảm giá",
-                    "seller": seller_name,
-                    "rating": f"{item.get('rating_average', 0):.1f}",
-                    "review_count": item.get("review_count", 0),
-                
-                    "url": f"https://tiki.vn/{item.get('url_path')}",
-
-                    "platform": "Tiki",
-                    "category": item.get("category", {}).get("name", "Unknown"),
-                    "brand": item.get("brand", {}).get("name", "Unknown Brand"),
-                    "timestamp": current_time
-                }
-                
-                # Add badges and promotions if available
-                badges = item.get("badge", {})
-                if badges:
-                    product["badges"] = [badge.get("text", "") for badge in badges if badge.get("text")]
-                    
-                # Add shipping info if available
-                if item.get("shipping_text"):
-                    product["shipping"] = item.get("shipping_text")
-                
-                products.append(product)
-            
-            if products:
-                print(f"\nTìm thấy {len(products)} sản phẩm phù hợp trên Tiki:")
-                return products
-            else:
-                print("\nKhông tìm thấy sản phẩm nào phù hợp trên Tiki")
-                return []
-                
-        print(f"\nLỗi: Tiki API trả về mã lỗi {response.status_code}")
-        return []
-    except Exception as e:
-        print(f"\nLỗi khi crawl dữ liệu từ Tiki: {str(e)}")
-        return []
+# import split functions from their new modules
+from create_chain_with_template import create_chain_with_template
+from Crawl_Data.crawl_tiki_product import crawl_tiki_product
 
 product_search_template = """
 Bạn là trợ lý mua sắm thông minh Sophie, một chuyên gia trong việc phân tích và tìm kiếm sản phẩm.
@@ -204,7 +69,58 @@ Bối cảnh hiện có:
 {context}
 """
 
-product_search_chain = create_chain_with_template(product_search_template)
+# Replace the direct chain with a function that first crawls Tiki for fresh data,
+# then feeds that data into the LLM chain for analysis.
+def product_search_chain(inputs: dict) -> str:
+    """Given inputs with 'question', crawl Tiki for product data and run the
+    product search LLM on the crawled data. Returns the LLM text result.
+    """
+    question = (inputs or {}).get("question", "")
+    logger.info("product_search_chain called with question=%r", question)
+
+    # Crawl Tiki for the query
+    try:
+        crawled = crawl_tiki_product(question)
+    except Exception as e:
+        return f"[ERROR] Lỗi khi crawl dữ liệu: {e}"
+
+    if not crawled:
+        # If nothing found, return an explicit message so callers can decide to
+        # fallback to other behavior if desired.
+        return "Tôi sẽ tìm kiếm sản phẩm này trên Tiki cho bạn."
+
+    # Build context from crawled products and run the LLM chain.
+    context_data = json.dumps(crawled, ensure_ascii=False)
+
+    # The product_search_template contains the heuristic phrase that would make
+    # create_chain_with_template return a retriever-based chain. To force the
+    # LLM-only branch, create a sanitized template without that line.
+    sanitized_template = product_search_template.replace(
+        'Nếu sản phẩm không có trong dữ liệu, hãy nói: "Tôi sẽ tìm kiếm sản phẩm này trên Tiki cho bạn."',
+        ""
+    )
+
+    # Add a persona definition (tính cách) similar to the price_comparison_template
+    # so the LLM receives an explicit role and tone instruction when processing data.
+    persona_definition = (
+        "Bạn là Sophie - trợ lý mua sắm thông minh và chuyên gia phân tích dữ liệu mua sắm. "
+        "Bạn cung cấp phân tích rõ ràng, khách quan, và thân thiện; luôn nêu lý do cho mỗi đề xuất và so sánh."
+    )
+
+    final_template = persona_definition + "\n\n" + sanitized_template
+
+    llm_processor = create_chain_with_template(final_template)
+
+    # llm_processor should be a callable that accepts a dict with 'context' and 'question'
+    try:
+        result = llm_processor({"context": context_data, "question": question})
+        return result
+    except Exception as e:
+        # Try alternate invocation style if the chain exposes an invoke method
+        try:
+            return llm_processor.invoke({"context": context_data, "question": question})
+        except Exception as ex:
+            return f"[ERROR] Lỗi khi gọi LLM chain: {ex}"
 
 # Price Comparison Chain
 price_comparison_template = """
