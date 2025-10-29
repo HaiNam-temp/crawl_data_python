@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         regMsg.textContent = '';
         const username = document.getElementById('reg-username').value;
+        const email = document.getElementById('reg-email').value;
         const password = document.getElementById('reg-password').value;
         const confirmPassword = document.getElementById('reg-confirm-password').value;
 
@@ -27,18 +28,22 @@ document.addEventListener('DOMContentLoaded', () => {
             regMsg.className = 'error-msg';
             return;
         }
-        if (!username || !password) {
-             regMsg.textContent = 'Vui lòng nhập đủ tên và mật khẩu.';
+        if (!username || !email || !password) {
+             regMsg.textContent = 'Vui lòng nhập đủ thông tin.';
              regMsg.className = 'error-msg';
              return;
         }
 
         try {
             // *** API ĐĂNG KÝ: /users/ (POST) ***
-            const response = await fetch('/users/', { // Sử dụng endpoint từ backend
+            const response = await fetch('http://localhost:8010/users/', { // Sử dụng endpoint từ backend
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password }) // Schema UserCreate
+                body: JSON.stringify({ 
+                    username, 
+                    email,
+                    password 
+                }) // Schema UserCreate
             });
 
             if (response.ok) {
@@ -84,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // *** API ĐĂNG NHẬP: /token (POST - form data) ***
-            const response = await fetch('/token', { // Sử dụng endpoint từ backend
+            const response = await fetch('http://localhost:8010/token', { // Sử dụng endpoint từ backend
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ username, password }) // Gửi dạng form data
@@ -94,8 +99,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json(); // Expects {"access_token": ..., "token_type": "bearer"}
                 if (data.access_token) {
                     localStorage.setItem('token', data.access_token);
-                    // Thông tin user chi tiết (username, role, id) sẽ lấy ở global.js
-                    window.location.href = 'index.html'; // Chuyển đến trang chủ
+                    
+                    // Lấy thông tin user để kiểm tra role
+                    try {
+                        const userResponse = await fetch('http://localhost:8010/users/me', {
+                            headers: { 'Authorization': `Bearer ${data.access_token}` }
+                        });
+                        
+                        if (userResponse.ok) {
+                            const userData = await userResponse.json();
+                            // Lưu thông tin user
+                            localStorage.setItem('username', userData.username);
+                            localStorage.setItem('user_id', userData.id);
+                            localStorage.setItem('role', userData.is_admin ? 'admin' : 'user');
+                            
+                            // Redirect dựa trên role
+                            if (userData.is_admin) {
+                                window.location.href = 'admin.html'; // Admin đi trang admin
+                            } else {
+                                window.location.href = 'index.html'; // User bình thường đi trang chủ
+                            }
+                        } else {
+                            // Nếu không lấy được user info, vẫn chuyển về index
+                            window.location.href = 'index.html';
+                        }
+                    } catch (error) {
+                        console.error('Error fetching user info:', error);
+                        window.location.href = 'index.html';
+                    }
                 } else {
                     loginError.textContent = 'Phản hồi đăng nhập không hợp lệ.';
                 }

@@ -29,14 +29,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log("Fetching user info from API...");
     try {
         // *** API LẤY THÔNG TIN USER: /users/me (GET) ***
-        const response = await fetch('/users/me', { // Sử dụng endpoint từ backend
+        const response = await fetch('http://localhost:8010/users/me', { // Sử dụng endpoint từ backend
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.ok) {
-            const userData = await response.json(); // Expects {id, username, role}
+            const userData = await response.json(); // Expects {id, username, email, is_admin}
             username = userData.username;
-            role = userData.role;
+            role = userData.is_admin ? 'admin' : 'user'; // Backend trả về is_admin (boolean)
             userId = userData.id;
             // Cập nhật lại localStorage
             localStorage.setItem('username', username);

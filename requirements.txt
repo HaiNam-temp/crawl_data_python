@@ -14,3 +14,8 @@ chromadb
 streamlit
 selenium
 webdriver-manager
+PyJWT 
+python-multipart
+jwt
+dotenv
+'pydantic[email]'

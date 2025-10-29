@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Hàm gọi API chung ---
     async function fetchAPI(url, options = {}) {
+        const baseURL = 'http://localhost:8010';
+        const fullURL = url.startsWith('http') ? url : baseURL + url;
+        
         const defaultOptions = {
             headers: {
                 'Content-Type': 'application/json',
@@ -28,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
          }
 
         try {
-            const response = await fetch(url, mergedOptions);
+            const response = await fetch(fullURL, mergedOptions);
             if (!response.ok) {
                 if (response.status === 401) { logoutUser(); } // Gọi hàm logout từ global.js
                 const errorText = await response.text();
@@ -53,15 +56,77 @@ document.addEventListener('DOMContentLoaded', async () => {
             const conversations = await fetchAPI('/conversations/');
             historyList.innerHTML = '';
             if (conversations && Array.isArray(conversations) && conversations.length > 0) {
-                conversations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Sắp xếp theo timestamp từ API
+                conversations.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)); // Sắp xếp theo updated_at từ API
                 conversations.forEach(conv => {
                     const item = document.createElement('div');
                     item.className = 'chat-history-item';
-                    item.textContent = conv.title;
                     item.dataset.chatId = conv.id;
                     if (conv.id === currentChatId) item.classList.add('active');
 
-                    item.addEventListener('click', () => {
+                    // Tạo wrapper cho title và button
+                    const titleSpan = document.createElement('span');
+                    titleSpan.textContent = conv.title;
+                    titleSpan.style.flex = '1';
+                    titleSpan.style.cursor = 'pointer';
+                    titleSpan.style.overflow = 'hidden';
+                    titleSpan.style.textOverflow = 'ellipsis';
+                    titleSpan.style.whiteSpace = 'nowrap';
+                    
+                    // Nút menu 3 chấm
+                    const menuBtn = document.createElement('button');
+                    menuBtn.innerHTML = '⋮'; // 3 chấm dọc
+                    menuBtn.className = 'chat-menu-btn';
+                    menuBtn.title = 'Menu';
+                    
+                    // Tạo menu dropdown
+                    const menu = document.createElement('div');
+                    menu.className = 'chat-menu-dropdown';
+                    menu.style.display = 'none';
+                    menu.innerHTML = `
+                        <div class="chat-menu-item delete-item">
+                            🗑️ Xóa chat
+                        </div>
+                    `;
+                    
+                    // Toggle menu
+                    menuBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        
+                        // Đóng tất cả menu khác
+                        document.querySelectorAll('.chat-menu-dropdown').forEach(m => {
+                            if (m !== menu) m.style.display = 'none';
+                        });
+                        
+                        // Toggle menu này
+                        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                    });
+                    
+                    // Xóa chat khi click vào menu item
+                    menu.querySelector('.delete-item').addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        menu.style.display = 'none';
+                        
+                        if (confirm(`Bạn có chắc muốn xóa chat "${conv.title}"?\n\nLưu ý: Thao tác này không thể hoàn tác!`)) {
+                            try {
+                                await fetchAPI(`/conversations/${conv.id}`, { method: 'DELETE' });
+                                
+                                // Nếu đang xem chat này, reset về chat mới và reload
+                                if (currentChatId === conv.id) {
+                                    currentChatId = null;
+                                    localStorage.removeItem('current_chat_id');
+                                    window.location.reload();
+                                } else {
+                                    // Chỉ reload lại history
+                                    await loadChatHistory();
+                                }
+                            } catch (error) {
+                                alert(`Lỗi xóa chat: ${error.message}`);
+                            }
+                        }
+                    });
+
+                    // Click vào title để chuyển chat
+                    titleSpan.addEventListener('click', () => {
                          if (currentChatId === conv.id) return; // Không làm gì nếu click vào chat đang active
                         currentChatId = conv.id;
                         localStorage.setItem('current_chat_id', currentChatId);
@@ -70,6 +135,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         document.querySelectorAll('.chat-history-item').forEach(el => el.classList.remove('active'));
                         item.classList.add('active');
                     });
+                    
+                    // Tạo container cho menu button và dropdown
+                    const menuContainer = document.createElement('div');
+                    menuContainer.style.position = 'relative';
+                    menuContainer.appendChild(menuBtn);
+                    menuContainer.appendChild(menu);
+                    
+                    item.appendChild(titleSpan);
+                    item.appendChild(menuContainer);
                     historyList.appendChild(item);
                 });
             } else {
@@ -167,11 +241,11 @@ document.addEventListener('DOMContentLoaded', async () => {
              // *** API GỬI MESSAGE & NHẬN PHẢN HỒI: /conversations/{id}/chat (POST) ***
              const botResponseData = await fetchAPI(`/conversations/${tempChatId}/chat`, {
                  method: 'POST',
-                 body: JSON.stringify({ role: 'user', content: userText }) // Gửi tin nhắn user
+                 body: JSON.stringify({ message: userText }) // Backend expects { message: str }
              });
 
-             if (botResponseData && botResponseData.content && botResponseData.role === 'assistant') { // API trả về tin nhắn bot { role: 'assistant', content: '...' }
-                 addMessageToUI('bot', botResponseData.content);
+             if (botResponseData && botResponseData.response) { // API trả về { response: str, conversation_id: str, message_id: str }
+                 addMessageToUI('bot', botResponseData.response);
              } else {
                   console.warn("API did not return expected bot response.", botResponseData);
                   addMessageToUI('bot', 'Lỗi khi nhận phản hồi từ Bot.');
@@ -199,16 +273,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- Nút Chat mới ---
     newChatBtn.addEventListener('click', () => {
-        if (currentChatId === null) return; // Đã là chat mới rồi
         currentChatId = null;
         localStorage.removeItem('current_chat_id');
-        loadChatMessages();
-        document.querySelectorAll('.chat-history-item').forEach(el => el.classList.remove('active'));
+        // Reload trang để reset giao diện
+        window.location.reload();
     });
 
     // --- Gán sự kiện ---
     sendBtn.addEventListener('click', sendMessage);
     chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    // --- Đóng menu khi click ra ngoài ---
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.chat-menu-btn')) {
+            document.querySelectorAll('.chat-menu-dropdown').forEach(menu => {
+                menu.style.display = 'none';
+            });
+        }
+    });
 
     // --- Khởi chạy ---
     await loadChatHistory();
