@@ -9,7 +9,7 @@ from logger_config import get_logger
 
 logger = get_logger(__name__)
 
-PRODUCTS_JSON_PATH = "data/tiki_products_user_keywords.json"
+PRODUCTS_JSON_PATH = "C:/Users/ADMIN/Desktop/Le_Dinh_Dat/LSD/data/tiki_products_user_keywords.json"
 PRODUCTS_CHROMA_PATH = "chroma_data"
 
 dotenv.load_dotenv()
@@ -28,9 +28,9 @@ def create_documents_from_products(products: List[Dict]) -> List[Document]:
         doc = Document(
             page_content=product_text,
             metadata={
-                "product_id": product.get("id", ""),
-                "platform": product.get("platform", ""),
-                "category": product.get("category", ""),
+                "title": product.get("title", ""),
+                "image": product.get("image", ""),
+                "price": product.get("price", ""),
                 "timestamp": datetime.now().isoformat()
             }
         )

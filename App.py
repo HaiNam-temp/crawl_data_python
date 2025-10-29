@@ -7,9 +7,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- PHẦN MÔ TẢ VÀ HƯỚSNG DẪN ---
 
-st.title("Chào mừng đến với PriceComp (bằng Python!)")
+st.title("Chào mừng đến với PriceComp")
 st.markdown(
     "Đây là dự án demo một ứng dụng so sánh giá"
 )
@@ -25,8 +24,7 @@ st.divider() # Thêm một đường kẻ ngang
 col1, col2 = st.columns(2)
 
 with col1:
-    # --- ĐÃ THAY ĐỔI ---
-    # Tạo 2 cột con: 1 cho icon, 1 cho tiêu đề
+
     icon_col, title_col = st.columns([0.15, 0.85], gap="small")
     with icon_col:
         # Sử dụng đường dẫn ảnh mới của bạn

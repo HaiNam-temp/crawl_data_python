@@ -64,7 +64,6 @@ vendorLogos = {
     "lazada": "https://lzd-img-global.slatic.net/g/tps/tfs/TB1eIwcVhnaK1RjSZFBXXcW7VXa-72-72.png",
 }
 
-# Hàm tìm kiếm (logic tương tự trong script.js)
 def search_products(query):
     query = query.lower().strip()
     if not query:

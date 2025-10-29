@@ -72,39 +72,9 @@ def save_message_to_db(role, content):
 
 def generate_bot_response(user_input):
     logger.info(f"User query: {user_input}")
-    try:
-        from chatbot import process_user_query
-
-        # process_user_query returns a string response ready to show in UI
-        return process_user_query(user_input)
-    except Exception:
-        # Fallback: simple local heuristic bot when the full chatbot isn't
-        # available (e.g., missing dependencies in the environment).
-        query = user_input.lower()
-        bot_reply = "Xin lỗi, tôi chưa hiểu ý bạn. Bạn có thể hỏi cụ thể hơn về tên sản phẩm được không?"
-
-        if "iphone 15" in query:
-            products = search_products("iphone 15")
-            if products:
-                bot_reply = "Tôi tìm thấy các sản phẩm iPhone 15 sau:\n\n"
-                for p in products:
-                    bot_reply += f"- {p['name']} tại {p['vendor']}\n  Giá: {p['price']:,} ₫\n\n"
-            else:
-                bot_reply = "Rất tiếc, tôi không tìm thấy sản phẩm iPhone 15 nào."
-
-        elif "tai nghe" in query or "baseus" in query:
-            products = search_products("baseus")
-            if products:
-                bot_reply = "Tôi tìm thấy các tai nghe Baseus sau:\n\n"
-                for p in products:
-                    bot_reply += f"- {p['name']} tại {p['vendor']}\n  Giá: {p['price']:,} ₫\n\n"
-            else:
-                bot_reply = "Rất tiếc, tôi không tìm thấy tai nghe Baseus nào."
-
-        elif "chào" in query or "hello" in query:
-            bot_reply = "Chào bạn, tôi là Trợ lý Giá cả. Bạn cần tìm gì nào?"
-
-        return bot_reply
+    from chatbot import process_user_query
+    bot_reply = process_user_query(user_input)
+    return bot_reply
 
 # --- 3. GIAO DIỆN CHAT STREAMLIT ---
 

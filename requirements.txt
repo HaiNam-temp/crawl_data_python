@@ -12,3 +12,5 @@ langchain-chroma
 langchain-community
 chromadb
 streamlit
+selenium
+webdriver-manager

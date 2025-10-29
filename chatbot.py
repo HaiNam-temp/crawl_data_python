@@ -1,11 +1,11 @@
 from dotenv import load_dotenv
 from logger_config import get_logger
 from tool import (
-    chat_model,
     product_search_chain,
     price_comparison_chain,
     crawl_tiki_product,
-    products_vector_db
+    get_vector_db,
+    get_chat_model
 )
 import os
 import json
@@ -13,18 +13,36 @@ from datetime import datetime
 from langchain_core.documents import Document
 load_dotenv()
 logger = get_logger(__name__)
+products_vector_db = get_vector_db()
+chat_model = get_chat_model()
 def process_user_query(user_query: str) -> str:
     logger.info(f"User query: {user_query}")
     try:
         # Extract product name from query using basic text cleaning
+        intent_prompt = f"""
+        Bạn là một trợ lý AI. Hãy phân loại câu sau thành một trong hai loại:
+        1. "chat" - nếu người dùng chỉ đang trò chuyện, hỏi linh tinh, không yêu cầu so sánh giá.
+        2. "compare" - nếu người dùng đang muốn tìm, xem, hoặc so sánh giá sản phẩm.
+
+        Câu người dùng: "{user_query}"
+
+        Chỉ trả về đúng một từ: chat hoặc compare.
+        """
+
+        intent = chat_model.invoke(intent_prompt).content.strip().lower()
+        logger.info(f"Detected intent: {intent}")
+
+        if intent == "chat":
+            # 💬 Trả lời như trợ lý trò chuyện
+            response = chat_model.invoke(f"Người dùng nói: {user_query}. Hãy phản hồi tự nhiên, thân thiện.").content
+            return response
+        
         product_name = user_query.lower()
         for term in ["tìm", "giá", "sản phẩm", "thông tin về"]:
             product_name = product_name.replace(term, "")
         product_name = product_name.strip()
         
-        
-
-        search_result = product_search_chain({"question": product_name})
+        search_result = product_search_chain.invoke({"question": product_name}, search_kwargs={"k": 5})
         
         # If no relevant results found in vector database, crawl from Tiki
         if "tôi sẽ tìm kiếm" in search_result.lower():
@@ -57,16 +75,20 @@ def process_user_query(user_query: str) -> str:
                         doc = Document(
                             page_content=product_text,
                             metadata={
-                                "product_id": product["id"],
-                                "platform": product["platform"],
-                                "category": product["category"],
+                                "name": product["name"],
+                                "price": product["price"],
+                                "url": product["url"],
+                                "rating": product["rating"],
+                                "review_count": product["review_count"],
                                 "timestamp": product["timestamp"]
                             }
                         )
                         documents.append(doc)
+
                     
                     # Add documents to vector store
                     products_vector_db.add_documents(documents)
+                    products_vector_db.persist()
                     logger.info("Updated vector database with new products.")
                 except Exception as e:
                     logger.error(f"Error updating vector database: {str(e)}")

@@ -3,6 +3,8 @@ from langchain_core.prompts import ChatPromptTemplate, HumanMessagePromptTemplat
 from langchain_core.output_parsers import StrOutputParser
 from langchain_chroma import Chroma
 from langchain_openai.embeddings import OpenAIEmbeddings
+from langchain_classic.callbacks.base import BaseCallbackHandler
+
 from operator import itemgetter
 import json
 from typing import List, Dict
@@ -15,114 +17,77 @@ dotenv.load_dotenv()
 from logger_config import get_logger
 logger = get_logger(__name__)
 # Initialize ChatOpenAI
-chat_model = ChatOpenAI(
-    model="gpt-5",
-    temperature=0
-)
 
 # Initialize vector database for product data
 PRODUCTS_CHROMA_PATH = "chroma_data/"
 
 # Initialize embeddings with explicit API key
-embedding_function = OpenAIEmbeddings(
-    openai_api_key=os.getenv("OPENAI_API_KEY"),
-    model="text-embedding-ada-002"
-)
+_vector_db = None
+_embeddings = None
+_chat_model = None
 
+class StreamingCallbackHandler(BaseCallbackHandler):
+    def on_llm_new_token(self, token: str, **kwargs):
+        """In ra từng token khi model stream"""
+        print(token, end="", flush=True)
 # Initialize vector database
-products_vector_db = Chroma(
-    persist_directory=PRODUCTS_CHROMA_PATH,
-    embedding_function=embedding_function
-)
-products_retriever = products_vector_db.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        _embeddings = OpenAIEmbeddings(
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            model="text-embedding-ada-002"
+        )
+    return _embeddings
 
+def get_vector_db():
+    global _vector_db
+    if _vector_db is None:
+        embeddings = get_embeddings()
+        _vector_db = Chroma(
+            persist_directory=PRODUCTS_CHROMA_PATH,
+            embedding_function=embeddings
+        )
+    return _vector_db
+
+def get_chat_model():
+    global _chat_model
+    if _chat_model is None:
+        _chat_model = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0,
+            streaming=True,
+            callbacks=[StreamingCallbackHandler()]
+        )
+    return _chat_model
 # import split functions from their new modules
 from create_chain_with_template import create_chain_with_template
 from Crawl_Data.crawl_tiki_product import crawl_tiki_product
 
 product_search_template = """
-Bạn là trợ lý mua sắm thông minh Sophie, một chuyên gia trong việc phân tích và tìm kiếm sản phẩm.
-Nhiệm vụ của bạn là xem xét kỹ lưỡng tất cả các sản phẩm trong {context} và đưa ra 5 đề xuất hàng đầu cho người dùng.
-Quy trình làm việc của bạn:
-Phân tích ngầm: Bạn phải tự động phân tích tất cả sản phẩm, so sánh chúng dựa trên 3 tiêu chí quan trọng như nhau:
-Chi phí: Mức giá có hợp lý không? Có phải là rẻ nhất không?
-Rating: Điểm đánh giá (sao) và số lượng đánh giá có cao không?
-Người bán: Thông tin về người bán (nếu có) có đáng tin cậy không?
-Đưa ra kết quả: Sau khi phân tích, hãy trình bày 5 đề xuất tốt nhất (hoặc ít hơn nếu context không đủ 5 sản phẩm).
-YÊU CẦU TRÌNH BÀY (Rất quan trọng):
-Hãy bắt đầu bằng một lời chào thân thiện. Sau đó, đi thẳng vào danh sách đề xuất.
-Với mỗi sản phẩm trong 5 đề xuất, bạn phải trình bày:
-Tên sản phẩm: [Tên sản phẩm]
-Thông tin: [Giá] VNĐ | [X.X] Sao ([Số lượng] đánh giá) | Bán bởi: [Tên người bán]
-Link: [URL]
+Bạn là Sophie, trợ lý mua sắm chuyên phân tích sản phẩm.
+Nhiệm vụ: Xem xét {context}, phân tích ngầm (Giá, Rating, Người bán) và đề xuất 5 sản phẩm hàng đầu.
+
+Yêu cầu trình bày:
+1. Chào thân thiện, sau đó liệt kê ngay 5 đề xuất (hoặc ít hơn nếu context không đủ).
+2. Định dạng cho mỗi sản phẩm:
+   Tên sản phẩm: [Tên sản phẩm]
+   Thông tin: [Giá] VNĐ | [X.X] Sao ([Số lượng] đánh giá) | Bán bởi: [Tên người bán]
+   Link: [URL]
+   Phân tích của Sophie: [**Bắt buộc:** Giải thích ngắn gọn lý do đề xuất, cân bằng 3 yếu tố. Ví dụ: "Lựa chọn hài hòa giá tốt, rating cao" hoặc "Rẻ nhất nhưng rating vẫn tốt" hoặc "Đắt hơn nhưng rating tuyệt đối"].
+Quy tắc:
+- Luôn giả định {context} có đủ dữ liệu (Tên, Giá, Rating, Lượt, Người bán, Link).
+- Phần "Phân tích của Sophie" là bắt buộc và phải hợp lý.
 Phân tích của Sophie (Lý do đề xuất): [Đây là phần quan trọng nhất. Hãy giải thích tại sao bạn đề xuất sản phẩm này. Hãy cân bằng cả 3 yếu tố.]
 Ví dụ 1 (Cân bằng): "Đây là lựa chọn hài hòa nhất! Mức giá rất tốt, rating cực cao (4.9 sao) và được bán bởi [Người bán uy tín]."
 Ví dụ 2 (Thiên về giá): "Nếu bạn ưu tiên tiết kiệm, đây là sản phẩm có giá rẻ nhất, mà rating vẫn giữ ở mức tốt (4.7 sao)."
 Ví dụ 3 (Thiên về chất lượng): "Sản phẩm này có giá cao hơn một chút, nhưng đổi lại bạn có rating tuyệt đối (5 sao) với hàng nghìn lượt đánh giá."
-Quy tắc bắt buộc:
-Bạn phải giả định rằng dữ liệu trong {context} đã bao gồm: Tên, Giá, Rating, Số lượng đánh giá, Người bán, và Link.
-Không suy diễn thông tin không có.
-Phần "Phân tích của Sophie" là bắt buộc và phải giải thích lý do một cách hợp lý.
-Nếu sản phẩm không có trong dữ liệu, hãy nói: "Tôi sẽ tìm kiếm sản phẩm này trên Tiki cho bạn."
-
+- Nếu {context} không có sản phẩm nào, hãy nói: "Tôi sẽ tìm kiếm sản phẩm này trên Tiki cho bạn."
 Bối cảnh hiện có:
 {context}
 """
 
-# Replace the direct chain with a function that first crawls Tiki for fresh data,
-# then feeds that data into the LLM chain for analysis.
-def product_search_chain(inputs: dict) -> str:
-    """Given inputs with 'question', crawl Tiki for product data and run the
-    product search LLM on the crawled data. Returns the LLM text result.
-    """
-    question = (inputs or {}).get("question", "")
-    logger.info("product_search_chain called with question=%r", question)
-
-    # Crawl Tiki for the query
-    try:
-        crawled = crawl_tiki_product(question)
-    except Exception as e:
-        return f"[ERROR] Lỗi khi crawl dữ liệu: {e}"
-
-    if not crawled:
-        # If nothing found, return an explicit message so callers can decide to
-        # fallback to other behavior if desired.
-        return "Tôi sẽ tìm kiếm sản phẩm này trên Tiki cho bạn."
-
-    # Build context from crawled products and run the LLM chain.
-    context_data = json.dumps(crawled, ensure_ascii=False)
-
-    # The product_search_template contains the heuristic phrase that would make
-    # create_chain_with_template return a retriever-based chain. To force the
-    # LLM-only branch, create a sanitized template without that line.
-    sanitized_template = product_search_template.replace(
-        'Nếu sản phẩm không có trong dữ liệu, hãy nói: "Tôi sẽ tìm kiếm sản phẩm này trên Tiki cho bạn."',
-        ""
-    )
-
-    # Add a persona definition (tính cách) similar to the price_comparison_template
-    # so the LLM receives an explicit role and tone instruction when processing data.
-    persona_definition = (
-        "Bạn là Sophie - trợ lý mua sắm thông minh và chuyên gia phân tích dữ liệu mua sắm. "
-        "Bạn cung cấp phân tích rõ ràng, khách quan, và thân thiện; luôn nêu lý do cho mỗi đề xuất và so sánh."
-    )
-
-    final_template = persona_definition + "\n\n" + sanitized_template
-
-    llm_processor = create_chain_with_template(final_template)
-
-    # llm_processor should be a callable that accepts a dict with 'context' and 'question'
-    try:
-        result = llm_processor({"context": context_data, "question": question})
-        return result
-    except Exception as e:
-        # Try alternate invocation style if the chain exposes an invoke method
-        try:
-            return llm_processor.invoke({"context": context_data, "question": question})
-        except Exception as ex:
-            return f"[ERROR] Lỗi khi gọi LLM chain: {ex}"
-
-# Price Comparison Chain
+product_search_chain = create_chain_with_template(product_search_template)
 price_comparison_template = """
 Bạn là Sophie - chuyên gia phân tích dữ liệu mua sắm. Bạn sẽ phân tích thông tin của các sản phẩm trong context được cung cấp.
 Dữ liệu sản phẩm bạn có bao gồm: name, price, rating (điểm sao), review_count (số lượng đánh giá), items_sold (số lượng đã bán), seller, và url.
@@ -143,7 +108,7 @@ Người bán: [Tên người bán]
 PHÂN TÍCH VÀ ĐỀ XUẤT (Dựa trên 4 yếu tố):
 Sau khi xem xét cả 4 yếu tố, Sophie có 3 đề xuất hàng đầu cho bạn:
 Lựa chọn TỐT NHẤT (Cân bằng Giá + Uy tín):
-Sản phẩm: [Tên SP]
+Sản phẩm: 
 Thông tin: [Giá] VNĐ | [X.X] Sao | Đã bán: [Số lượng] | Bán bởi: [Tên người bán]
 Link: [URL]
 Lý do chọn: Đây là lựa chọn hài hòa nhất. Nó có mức giá [hợp lý/rất tốt], điểm rating [cao/rất cao] và đã được [số lượng] khách hàng mua, cho thấy độ tin cậy từ người bán này.

@@ -20,7 +20,7 @@ def crawl_tiki_product(product_name: str) -> List[Dict]:
     """
     params = {
         "q": product_name,
-        "limit": 20,  # Increased for better coverage
+        "limit": 5,  # Increased for better coverage
         "sort": "score,price,asc",  # Sort by relevance and price
         "aggregations": 1
     }
@@ -56,18 +56,11 @@ def crawl_tiki_product(product_name: str) -> List[Dict]:
                     "name": item.get("name").strip(),
                     "price": current_price,
                     "original_price": original_price,
-                    "price_display": f"{current_price:,.0f} VNĐ",
-                    "original_price_display": f"{original_price:,.0f} VNĐ",
                     "discount": f"-{discount_rate}%" if discount_rate > 0 else "Không giảm giá",
                     "seller": seller_name,
                     "rating": f"{item.get('rating_average', 0):.1f}",
                     "review_count": item.get("review_count", 0),
-                
                     "url": f"https://tiki.vn/{item.get('url_path')}",
-
-                    "platform": "Tiki",
-                    "category": item.get("category", {}).get("name", "Unknown"),
-                    "brand": item.get("brand", {}).get("name", "Unknown Brand"),
                     "timestamp": current_time
                 }
                 
