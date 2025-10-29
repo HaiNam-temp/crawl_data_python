@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cài đặt | PriceComp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="Image/iconChat.png">
+    <script src="js/auth.js"></script> </head>
+<body>
+    <aside class="sidebar" id="sidebar-container"></aside>
+
+    <main class="main-content">
+        <h2>Cài đặt Tài khoản và Dữ liệu ⚙️</h2>
+
+        <div class="setting-section">
+            <h3 id="setting-username">Tài khoản: </h3>
+            <div class="login-form" style="max-width: 500px; margin-top: 10px;">
+                <h4>Đổi mật khẩu</h4>
+                <form id="change-password-form">
+                    <label for="new-password">Mật khẩu mới:</label>
+                    <input type="password" id="new-password" required>
+                     <label for="confirm-password">Xác nhận mật khẩu mới:</label>
+                    <input type="password" id="confirm-password" required>
+                    <button type="submit" class="btn">Lưu thay đổi</button>
+                    <p id="setting-msg" class=""></p>
+                </form>
+            </div>
+        </div>
+
+
+        <div class="setting-section">
+            <h3>Quản lý dữ liệu</h3>
+             <div style="border: 1px solid #e74c3c; padding: 15px; border-radius: 5px; max-width: 500px;">
+                <h4 style="color: #e74c3c;">Xóa lịch sử trò chuyện</h4>
+                <p>HÀNH ĐỘNG NÀY KHÔNG THỂ HOÀN TÁC!</p>
+                <button id="delete-history-btn" class="btn btn-danger" style="margin-top: 10px;">Xóa tất cả lịch sử chat</button>
+            </div>
+        </div>
+
+         <div class="setting-section">
+             <h3>Giao diện</h3>
+             <p>Bạn có thể đổi giao diện Sáng/Tối (Light/Dark mode) trong cài đặt của trình duyệt hoặc hệ điều hành.</p>
+         </div>
+    </main>
+
+    <script src="js/global.js"></script>
+    <script src="js/setting.js"></script>
+</body>
+</html>

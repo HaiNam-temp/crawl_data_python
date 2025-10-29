@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PriceComp | Đăng nhập</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="Image/iconChat.png">
+    <script src="js/auth.js"></script>
+</head>
+<body class="login-page">
+
+    <div class="login-container">
+        <h1>Chào mừng đến với PriceComp! 🤖</h1>
+        <p>Vui lòng đăng nhập hoặc đăng ký để tiếp tục.</p>
+
+        <div class="login-tabs">
+            <button class="tab-button active" data-tab="login">Đăng nhập</button>
+            <button class="tab-button" data-tab="register">Đăng ký</button>
+        </div>
+
+        <div id="login" class="tab-content active">
+            <div class="login-form">
+                <form id="login-form">
+                    <label for="login-username">Tên đăng nhập:</label>
+                    <input type="text" id="login-username" required>
+                    <label for="login-password">Mật khẩu:</label>
+                    <input type="password" id="login-password" required>
+                    <button type="submit" class="btn">Đăng nhập</button>
+                    <p id="login-error" class="error-msg"></p>
+                </form>
+            </div>
+        </div>
+
+        <div id="register" class="tab-content">
+            <div class="login-form">
+                <form id="register-form">
+                     <label for="reg-username">Tên đăng nhập mới:</label>
+                    <input type="text" id="reg-username" required>
+                     <label for="reg-password">Mật khẩu mới:</label>
+                    <input type="password" id="reg-password" required>
+                     <label for="reg-confirm-password">Xác nhận mật khẩu:</label>
+                    <input type="password" id="reg-confirm-password" required>
+                    <button type="submit" class="btn">Đăng ký</button>
+                    <p id="register-msg" class=""></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/login.js"></script>
+</body>
+</html>

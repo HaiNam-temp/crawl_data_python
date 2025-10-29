@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | PriceComp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="Image/iconChat.png">
+    <script src="js/auth.js"></script> </head>
+<body>
+    <aside class="sidebar" id="sidebar-container"></aside>
+
+    <main class="main-content">
+        <h2>Trang Quản trị 🔒</h2>
+        <h3>Quản lý Nền tảng Crawl Dữ liệu</h3>
+
+        <div class="setting-section" style="max-width: 700px;">
+            <form id="new-platform-form">
+                <h4>Thêm nền tảng mới</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label for="platform-name">Tên nền tảng:</label>
+                        <input type="text" id="platform-name" placeholder="Ví dụ: Shopee" required>
+                    </div>
+                     <div>
+                        <label for="platform-url">Link trang chủ:</label>
+                        <input type="url" id="platform-url" placeholder="https://shopee.vn" required>
+                    </div>
+                </div>
+                 <div>
+                        <label for="platform-logo">Link ảnh logo (URL):</label>
+                        <input type="url" id="platform-logo" placeholder="URL đến file .png, .jpg...">
+                 </div>
+                <button type="submit" class="btn" style="margin-top: 15px;">Thêm nền tảng</button>
+            </form>
+        </div>
+
+        <hr>
+        <h3>Các nền tảng hiện tại</h3>
+        <div id="platform-list">
+            <p>Đang tải...</p>
+        </div>
+    </main>
+
+    <script src="js/global.js"></script>
+    <script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot | PriceComp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="Image/iconChat.png">
+    <script src="js/auth.js"></script> </head>
+<body class="chat-page"> <aside class="sidebar" id="sidebar-container"></aside>
+
+    <aside class="chat-history-sidebar">
+        <button class="btn" id="new-chat-btn" style="width: 100%;">📝 Chat mới</button>
+        <hr>
+        <h3>Lịch sử trò chuyện</h3>
+        <div id="chat-history-list">
+            </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Nhập câu hỏi của bạn...">
+                <button class="btn" id="chat-send-btn">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z"/>
+                     </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/global.js"></script>
+    <script src="js/chat.js"></script>
+</body>
+</html>

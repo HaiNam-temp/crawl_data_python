@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm kiếm | PriceComp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="Image/iconChat.png">
+    <script src="js/auth.js"></script> </head>
+<body>
+    <aside class="sidebar" id="sidebar-container"></aside>
+
+    <main class="main-content">
+        <h2>PriceComp / So Sánh Giá</h2>
+        <p>Tìm kiếm sản phẩm, so sánh giá từ các nguồn dữ liệu.</p>
+        <input type="text" id="search-input" placeholder="Nhập tên sản phẩm bạn muốn tìm..." style="margin-top: 15px; max-width: 600px;">
+        <hr>
+        <div id="results-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px;">
+            <p id="initial-message">Nhập từ khóa vào ô tìm kiếm và nhấn Enter để bắt đầu nhé! 🤖</p>
+            </div>
+    </main>
+
+    <script src="js/global.js"></script>
+    <script src="js/search.js"></script>
+</body>
+</html>
