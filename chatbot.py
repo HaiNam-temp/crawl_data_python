@@ -3,11 +3,15 @@ from logger_config import get_logger
 from tool import (
     product_search_chain,
     price_comparison_chain,
-    crawl_tiki_product,
     get_vector_db,
     get_chat_model
 )
+# Import multi-platform crawler thay cho Tiki only
+import sys
 import os
+sys.path.append(os.path.join(os.path.dirname(__file__), 'Crawl_Data'))
+from Crawl_Data.run_all_crawlers import crawl_all_platforms
+
 import json
 from datetime import datetime
 from langchain_core.documents import Document
@@ -18,7 +22,6 @@ chat_model = get_chat_model()
 def process_user_query(user_query: str) -> str:
     logger.info(f"User query: {user_query}")
     try:
-        # Extract product name from query using basic text cleaning
         intent_prompt = f"""
         Bạn là một trợ lý AI. Hãy phân loại câu sau thành một trong hai loại:
         1. "chat" - nếu người dùng chỉ đang trò chuyện, hỏi linh tinh, không yêu cầu so sánh giá.
@@ -26,32 +29,37 @@ def process_user_query(user_query: str) -> str:
 
         Câu người dùng: "{user_query}"
 
-        Chỉ trả về đúng một từ: chat hoặc compare.
+        Nếu là "chat", chỉ trả về từ "chat".
+        Nếu là "compare", hãy trả về **tên sản phẩm kèm đặc điểm** (ví dụ: "iPhone 14 Pro 128GB").
         """
 
-        intent = chat_model.invoke(intent_prompt).content.strip().lower()
-        logger.info(f"Detected intent: {intent}")
+        intent_result = chat_model.invoke(intent_prompt).content.strip()
+        logger.info(f"Detected intent result: {intent_result}")
 
-        if intent == "chat":
-            # 💬 Trả lời như trợ lý trò chuyện
-            response = chat_model.invoke(f"Người dùng nói: {user_query}. Hãy phản hồi tự nhiên, thân thiện.").content
+        # 🧩 Bước 2: Xử lý intent
+        if intent_result.lower() == "chat":
+            response = chat_model.invoke(
+                f"Người dùng nói: {user_query}. Hãy phản hồi tự nhiên, thân thiện như một trợ lý AI."
+            ).content
             return response
-        
-        product_name = user_query.lower()
-        for term in ["tìm", "giá", "sản phẩm", "thông tin về"]:
-            product_name = product_name.replace(term, "")
-        product_name = product_name.strip()
-        
-        search_result = product_search_chain.invoke({"question": product_name}, search_kwargs={"k": 5})
-        
-        # If no relevant results found in vector database, crawl from Tiki
+
+        # Nếu không phải chat, coi kết quả là tên sản phẩm cần tìm
+        product_name = intent_result
+        logger.info(f"Extracted product name: {product_name}")
+
+        # 🔍 Bước 3: Tìm sản phẩm
+        search_result = product_search_chain.invoke(
+            {"question": product_name}
+        )
+        # If no relevant results found in vector database, crawl from all platforms
         if "tôi sẽ tìm kiếm" in search_result.lower():
             logger.info(f"Search result: {search_result}")
-            tiki_products = crawl_tiki_product(product_name)
+            # Crawl từ tất cả platforms thay vì chỉ Tiki  
+            all_products = crawl_all_platforms(product_name, limit=None)
             
-            if tiki_products:                         
+            if all_products:                         
                 # Start price comparison immediately with crawled data
-                context_data = json.dumps(tiki_products, ensure_ascii=False)
+                context_data = json.dumps(all_products, ensure_ascii=False)
                 try:
                     comparison_result = price_comparison_chain({
                         "context": context_data,
@@ -67,7 +75,7 @@ def process_user_query(user_query: str) -> str:
                 try:
                     # Convert products to Document objects
                     documents = []
-                    for product in tiki_products:
+                    for product in all_products:
                         # Convert product dict to string for embedding
                         product_text = json.dumps(product, ensure_ascii=False)
                         
@@ -88,7 +96,6 @@ def process_user_query(user_query: str) -> str:
                     
                     # Add documents to vector store
                     products_vector_db.add_documents(documents)
-                    products_vector_db.persist()
                     logger.info("Updated vector database with new products.")
                 except Exception as e:
                     logger.error(f"Error updating vector database: {str(e)}")
@@ -96,7 +103,7 @@ def process_user_query(user_query: str) -> str:
 
                 return comparison_result
             else:
-                return "Xin lỗi, tôi không tìm thấy thông tin về sản phẩm này trên Tiki. Vui lòng thử lại với từ khóa khác."
+                return "Xin lỗi, tôi không tìm thấy thông tin về sản phẩm này trên các sàn thương mại điện tử. Vui lòng thử lại với từ khóa khác."
         
         return search_result
         

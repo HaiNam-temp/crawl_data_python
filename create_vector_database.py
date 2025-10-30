@@ -60,5 +60,46 @@ def initialize_vector_store():
         logger.error("Error creating vector store: %s", str(e))
         return None
 
+def add_documents_to_vector_db(documents_data: List[Dict]):
+    """
+    Add new documents to existing vector database
+    
+    Args:
+        documents_data: List of dicts with 'content' and 'metadata' keys
+    """
+    try:
+        logger.info(f"Adding {len(documents_data)} documents to vector database")
+        
+        # Convert to Document objects
+        documents = []
+        for doc_data in documents_data:
+            doc = Document(
+                page_content=doc_data['content'],
+                metadata=doc_data.get('metadata', {})
+            )
+            documents.append(doc)
+        
+        # Load existing vector store or create new one
+        try:
+            vector_store = Chroma(
+                persist_directory=PRODUCTS_CHROMA_PATH,
+                embedding_function=OpenAIEmbeddings()
+            )
+            # Add documents to existing store
+            vector_store.add_documents(documents)
+        except Exception:
+            # If store doesn't exist, create new one
+            vector_store = Chroma.from_documents(
+                documents,
+                OpenAIEmbeddings(),
+                persist_directory=PRODUCTS_CHROMA_PATH
+            )
+        
+        logger.info(f"Successfully added {len(documents)} documents to vector database")
+        
+    except Exception as e:
+        logger.error(f"Error adding documents to vector database: {e}")
+
+
 if __name__ == "__main__":
     initialize_vector_store()

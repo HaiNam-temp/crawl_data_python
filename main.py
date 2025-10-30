@@ -17,7 +17,6 @@ except ImportError:
 # Import từ backend modules
 from backend.database import init_database
 from backend.routes import auth_routes, conversation_routes, admin_routes
-
 # Initialize FastAPI app
 app = FastAPI(
     title="Sophie Chatbot API",
@@ -45,6 +44,7 @@ async def startup_event():
 app.include_router(auth_routes.router, tags=["Authentication"])
 app.include_router(conversation_routes.router, tags=["Conversations"])
 app.include_router(admin_routes.router, tags=["Admin"])
+
 
 # Root endpoint
 @app.get("/")

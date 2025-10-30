@@ -14,6 +14,76 @@ import json
 import sys
 import re
 from urllib.parse import urljoin
+from typing import List, Dict
+from datetime import datetime
+
+def scrape_dienthoaivui_products(product_name: str) -> List[Dict]:
+    """
+    Crawl sản phẩm từ Điện Thoại Vui và trả về list dict với format giống crawl_tiki_product
+    Giới hạn chỉ lấy 5 sản phẩm
+    """
+    try:
+        search_url = f"https://dienthoaivui.com.vn/tim-kiem?_tim_kiem={product_name}"
+        raw_results = scrape(search_url, limit=10)  # Lấy 10 để có đủ data filter
+        
+        products = []
+        current_time = datetime.now().isoformat()
+        
+        for idx, item in enumerate(raw_results, 1):
+            if len(products) >= 5:  # Giới hạn 5 sản phẩm
+                break
+                
+            if not item.get('title'):
+                continue
+            
+            # Xử lý giá
+            price = item.get('price', 0)
+            if isinstance(price, str):
+                # Trích xuất số từ string
+                import re
+                price_numbers = re.findall(r'[\d,\.]+', price.replace('₫', '').replace('đ', ''))
+                if price_numbers:
+                    try:
+                        price_str = price_numbers[0].replace(',', '').replace('.', '')
+                        price = int(price_str)
+                    except (ValueError, IndexError):
+                        price = 0
+            
+            # Tạo unique product ID
+            product_id = f"dienthoaivui_{int(datetime.now().timestamp())}_{len(products)+1}"
+            
+            # Tạo product dict với format giống crawl_tiki_product
+            product = {
+                "id": product_id,
+                "name": item.get('title', '').strip(),
+                "price": price or 0,
+                "original_price": price or 0,
+                "discount": "Không giảm giá",
+                "seller": "Điện Thoại Vui",
+                "rating": f"{item.get('rating', 0.0):.1f}",
+                "review_count": item.get('review_count', 0),
+                "url": item.get('url', ''),
+                "timestamp": current_time,
+                "platform": "dienthoaivui",
+                "sold_count": item.get('sold_count', "0")
+            }
+            
+            # Thêm thông tin ảnh nếu có
+            if item.get('image'):
+                product["image"] = item.get('image')
+            
+            products.append(product)
+        
+        if products:
+            print(f"Tìm thấy {len(products)} sản phẩm từ Điện Thoại Vui")
+        else:
+            print("Không tìm thấy sản phẩm nào từ Điện Thoại Vui")
+        
+        return products
+        
+    except Exception as e:
+        print(f"Lỗi khi crawl dữ liệu từ Điện Thoại Vui: {e}")
+        return []
 
 def _clean_title(raw: str) -> str:
     if not raw:
@@ -151,7 +221,15 @@ def scrape(search_url, limit=None):
                         continue
 
                 seen.add(full)
-                results_by_anchor.append({'title': title, 'url': full, 'price': pval, 'image': img})
+                results_by_anchor.append({
+                    'title': title, 
+                    'url': full, 
+                    'price': pval, 
+                    'image': img,
+                    'rating': 0.0,
+                    'review_count': 0,
+                    'sold_count': "0"
+                })
             except Exception:
                 continue
 
@@ -230,7 +308,72 @@ def scrape(search_url, limit=None):
                             whole = item.inner_text() or ''
                             price = _clean_price_text(whole)
 
-                        results.append({'title': title, 'url': url, 'price': price, 'image': img})
+                        # Tìm rating, review count và sold count trong item
+                        rating = 0.0
+                        review_count = 0
+                        sold_count = "0"
+                        
+                        try:
+                            item_text = item.inner_text() or ''
+                            
+                            # Tìm rating
+                            import re
+                            rating_patterns = [
+                                r'(\d+\.?\d*)\s*/?\s*5\s*sao',
+                                r'(\d+\.?\d*)\s*sao',
+                                r'Rating:\s*(\d+\.?\d*)',
+                                r'(\d+\.?\d*)\s*★'
+                            ]
+                            for pattern in rating_patterns:
+                                rating_match = re.search(pattern, item_text, re.IGNORECASE)
+                                if rating_match:
+                                    try:
+                                        rating_val = float(rating_match.group(1))
+                                        if 0 <= rating_val <= 5:
+                                            rating = rating_val
+                                            break
+                                    except ValueError:
+                                        pass
+                            
+                            # Tìm review count
+                            review_patterns = [
+                                r'(\d+)\s*(?:đánh giá|review|nhận xét)',
+                                r'\((\d+)\s*(?:đánh giá|review)\)',
+                                r'(\d+)\s*comment'
+                            ]
+                            for pattern in review_patterns:
+                                review_match = re.search(pattern, item_text, re.IGNORECASE)
+                                if review_match:
+                                    try:
+                                        review_count = int(review_match.group(1))
+                                        break
+                                    except ValueError:
+                                        pass
+                            
+                            # Tìm sold count
+                            sold_patterns = [
+                                r'(\d+[k\d,\.]*)\s*(?:đã bán|sold)',
+                                r'Bán:\s*(\d+[k\d,\.]*)',
+                                r'(\d+[k\d,\.]*)\s*lượt mua'
+                            ]
+                            for pattern in sold_patterns:
+                                sold_match = re.search(pattern, item_text, re.IGNORECASE)
+                                if sold_match:
+                                    sold_count = sold_match.group(1)
+                                    break
+                                    
+                        except Exception:
+                            pass
+
+                        results.append({
+                            'title': title, 
+                            'url': url, 
+                            'price': price, 
+                            'image': img,
+                            'rating': rating,
+                            'review_count': review_count,
+                            'sold_count': sold_count
+                        })
                     except Exception:
                         continue
             else:
@@ -281,12 +424,78 @@ def scrape(search_url, limit=None):
                         except Exception:
                             img = None
 
+                        # Tìm rating và review count
+                        rating = 0.0
+                        review_count = 0
+                        sold_count = "0"
+                        
+                        # Kiểm tra ancestor elements để tìm rating/review info
+                        try:
+                            ancestor_text = page.evaluate("(el) => { let n = el; let acc=''; for(let i=0;i<3;i++){ if(!n) break; if(n.innerText) acc += n.innerText + ' '; n = n.parentElement;} return acc; }", a) or ''
+                            
+                            # Tìm rating
+                            import re
+                            rating_patterns = [
+                                r'(\d+\.?\d*)\s*/?\s*5\s*sao',
+                                r'(\d+\.?\d*)\s*sao',
+                                r'Rating:\s*(\d+\.?\d*)',
+                                r'(\d+\.?\d*)\s*★'
+                            ]
+                            for pattern in rating_patterns:
+                                rating_match = re.search(pattern, ancestor_text, re.IGNORECASE)
+                                if rating_match:
+                                    try:
+                                        rating_val = float(rating_match.group(1))
+                                        if 0 <= rating_val <= 5:
+                                            rating = rating_val
+                                            break
+                                    except ValueError:
+                                        pass
+                            
+                            # Tìm review count
+                            review_patterns = [
+                                r'(\d+)\s*(?:đánh giá|review|nhận xét)',
+                                r'\((\d+)\s*(?:đánh giá|review)\)',
+                                r'(\d+)\s*comment'
+                            ]
+                            for pattern in review_patterns:
+                                review_match = re.search(pattern, ancestor_text, re.IGNORECASE)
+                                if review_match:
+                                    try:
+                                        review_count = int(review_match.group(1))
+                                        break
+                                    except ValueError:
+                                        pass
+                            
+                            # Tìm sold count
+                            sold_patterns = [
+                                r'(\d+[k\d,\.]*)\s*(?:đã bán|sold)',
+                                r'Bán:\s*(\d+[k\d,\.]*)',
+                                r'(\d+[k\d,\.]*)\s*lượt mua'
+                            ]
+                            for pattern in sold_patterns:
+                                sold_match = re.search(pattern, ancestor_text, re.IGNORECASE)
+                                if sold_match:
+                                    sold_count = sold_match.group(1)
+                                    break
+                                    
+                        except Exception:
+                            pass
+
                         # keep anchors that have price or image
                         if price is None and not img:
                             continue
 
                         seen.add(url)
-                        results.append({'title': title, 'url': url, 'price': price, 'image': img})
+                        results.append({
+                            'title': title, 
+                            'url': url, 
+                            'price': price, 
+                            'image': img,
+                            'rating': rating,
+                            'review_count': review_count,
+                            'sold_count': sold_count
+                        })
                     except Exception:
                         continue
 
@@ -339,11 +548,29 @@ def scrape(search_url, limit=None):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--url', required=True)
+    parser.add_argument('--url', required=False)
+    parser.add_argument('--product', required=False)
     parser.add_argument('--limit', type=int, default=10)
     args = parser.parse_args()
 
-    res = scrape(args.url, limit=args.limit)
+    if args.product:
+        # Sử dụng function mới với format giống crawl_tiki_product
+        res = scrape_dienthoaivui_products(args.product)
+    elif args.url:
+        # Sử dụng function cũ
+        res = scrape(args.url, limit=args.limit)
+    else:
+        # Chế độ interactive
+        print("Điện Thoại Vui Product Crawler")
+        print("-" * 30)
+        
+        product_name = input("Nhập tên sản phẩm: ").strip()
+        if not product_name:
+            print("Tên sản phẩm không được để trống!")
+            return
+        
+        res = scrape_dienthoaivui_products(product_name)
+    
     import sys
     sys.stdout.buffer.write(json.dumps(res, ensure_ascii=False, indent=2).encode('utf-8'))
 
