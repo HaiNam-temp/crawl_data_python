@@ -2,11 +2,6 @@ from typing import List, Dict
 import requests
 from datetime import datetime
 
-from logger_config import get_logger
-
-
-logger = get_logger(__name__)
-
 # Tiki API configuration (copied so this module is independent)
 TIKI_API_URL = "https://tiki.vn/api/v2/products"
 headers = {
@@ -61,7 +56,8 @@ def crawl_tiki_product(product_name: str) -> List[Dict]:
                     "rating": f"{item.get('rating_average', 0):.1f}",
                     "review_count": item.get("review_count", 0),
                     "url": f"https://tiki.vn/{item.get('url_path')}",
-                    "timestamp": current_time
+                    "timestamp": current_time,
+                    "platform": "tiki"
                 }
                 
                 # Add badges and promotions if available
@@ -76,14 +72,14 @@ def crawl_tiki_product(product_name: str) -> List[Dict]:
                 products.append(product)
             
             if products:
-                logger.info("Tìm thấy %d sản phẩm phù hợp trên Tiki", len(products))
+                print(f"Tìm thấy {len(products)} sản phẩm phù hợp trên Tiki")
                 return products
             else:
-                logger.info("Không tìm thấy sản phẩm nào phù hợp trên Tiki")
+                print("Không tìm thấy sản phẩm nào phù hợp trên Tiki")
                 return []
 
-        logger.error("Tiki API trả về mã lỗi %s", response.status_code)
+        print(f"Tiki API trả về mã lỗi {response.status_code}")
         return []
     except Exception as e:
-        logger.error("Lỗi khi crawl dữ liệu từ Tiki: %s", e)
+        print(f"Lỗi khi crawl dữ liệu từ Tiki: {e}")
         return []

@@ -66,68 +66,56 @@ from Crawl_Data.crawl_tiki_product import crawl_tiki_product
 
 product_search_template = """
 Bạn là Sophie, trợ lý mua sắm chuyên phân tích sản phẩm.
-Nhiệm vụ: Xem xét {context}, phân tích ngầm (Giá, Rating, Người bán) và đề xuất 5 sản phẩm hàng đầu.
-
-Yêu cầu trình bày:
-1. Chào thân thiện, sau đó liệt kê ngay 5 đề xuất (hoặc ít hơn nếu context không đủ).
-2. Định dạng cho mỗi sản phẩm:
-   Tên sản phẩm: [Tên sản phẩm]
-   Thông tin: [Giá] VNĐ | [X.X] Sao ([Số lượng] đánh giá) | Bán bởi: [Tên người bán]
-   Link: [URL]
-   Phân tích của Sophie: [**Bắt buộc:** Giải thích ngắn gọn lý do đề xuất, cân bằng 3 yếu tố. Ví dụ: "Lựa chọn hài hòa giá tốt, rating cao" hoặc "Rẻ nhất nhưng rating vẫn tốt" hoặc "Đắt hơn nhưng rating tuyệt đối"].
-Quy tắc:
-- Luôn giả định {context} có đủ dữ liệu (Tên, Giá, Rating, Lượt, Người bán, Link).
-- Phần "Phân tích của Sophie" là bắt buộc và phải hợp lý.
-Phân tích của Sophie (Lý do đề xuất): [Đây là phần quan trọng nhất. Hãy giải thích tại sao bạn đề xuất sản phẩm này. Hãy cân bằng cả 3 yếu tố.]
-Ví dụ 1 (Cân bằng): "Đây là lựa chọn hài hòa nhất! Mức giá rất tốt, rating cực cao (4.9 sao) và được bán bởi [Người bán uy tín]."
-Ví dụ 2 (Thiên về giá): "Nếu bạn ưu tiên tiết kiệm, đây là sản phẩm có giá rẻ nhất, mà rating vẫn giữ ở mức tốt (4.7 sao)."
-Ví dụ 3 (Thiên về chất lượng): "Sản phẩm này có giá cao hơn một chút, nhưng đổi lại bạn có rating tuyệt đối (5 sao) với hàng nghìn lượt đánh giá."
-- Nếu {context} không có sản phẩm nào, hãy nói: "Tôi sẽ tìm kiếm sản phẩm này trên Tiki cho bạn."
-Bối cảnh hiện có:
-{context}
+Nhiệm vụ: Xem xét {context}, phân tích ngầm (Giá, Rating, Người bán) và đề xuất 15 sản phẩm hàng đầu.
+Nếu không tìm thấy sản phẩm phù hợp, hãy trả lời: "Tôi sẽ tìm kiếm sản phẩm này trên các sàn thương mại điện tử."
 """
 
 product_search_chain = create_chain_with_template(product_search_template)
 price_comparison_template = """
-Bạn là Sophie - chuyên gia phân tích dữ liệu mua sắm. Bạn sẽ phân tích thông tin của các sản phẩm trong context được cung cấp.
-Dữ liệu sản phẩm bạn có bao gồm: name, price, rating (điểm sao), review_count (số lượng đánh giá), items_sold (số lượng đã bán), seller, và url.
-Nhiệm vụ của bạn là so sánh tất cả sản phẩm dựa trên 4 yếu tố chính: Giá, Rating, Người bán, và Số lượng đã bán.
-LUÔN LUÔN phân tích chi tiết theo định dạng sau:
-BẢNG SO SÁNH TỔNG QUAN: (Sophie sẽ sắp xếp các sản phẩm theo mức giá tăng dần để bạn dễ theo dõi)
-[Tên SP 1]
+Chào bạn, tôi là Sophie, chuyên gia phân tích dữ liệu mua sắm của bạn đây.
+
+Tôi đã ghi nhận vai trò và yêu cầu phân tích. Đặc biệt, tôi hiểu rằng bạn muốn tôi tập trung chính vào yếu tố Giá cả và trình bày thông tin một cách ngắn gọn, súc tích hơn so với mẫu chi tiết ban đầu. Các yếu tố như rating, người bán và số lượng bán sẽ được dùng làm thông tin bổ sung.
+💡 ĐỀ XUẤT CỦA SOPHIE (Tập trung vào Giá)
+🥇 Lựa chọn TIẾT KIỆM (Rẻ nhất):
+
+Sản phẩm: [Tên SP]
+
 Giá: [Giá] VNĐ
-Rating: [X.X] Sao ([Số lượng] đánh giá)
-Đã bán: [Số lượng]
-Người bán: [Tên người bán]
-[Tên SP 2]
+
+Từ: [Tên người bán] (trên [Nền tảng])
+
+Link: [URL]
+
+Lưu ý: Đây là mức giá thấp nhất. Tuy nhiên, các chỉ số [rating/số lượng bán] đang ở mức [mô tả ngắn].
+
+🥈 Lựa chọn CÂN BẰNG (Giá tốt + Uy tín):
+
+Sản phẩm: [Tên SP]
+
 Giá: [Giá] VNĐ
-Rating: [X.X] Sao ([Số lượng] đánh giá)
-Đã bán: [Số lượng]
-Người bán: [Tên người bán]
-... (Liệt kê tất cả sản phẩm)
-PHÂN TÍCH VÀ ĐỀ XUẤT (Dựa trên 4 yếu tố):
-Sau khi xem xét cả 4 yếu tố, Sophie có 3 đề xuất hàng đầu cho bạn:
-Lựa chọn TỐT NHẤT (Cân bằng Giá + Uy tín):
-Sản phẩm: 
-Thông tin: [Giá] VNĐ | [X.X] Sao | Đã bán: [Số lượng] | Bán bởi: [Tên người bán]
+
+Thông tin: [X.X] Sao | Đã bán: [Số lượng]
+
+Từ: [Tên người bán] (trên [Nền tảng])
+
 Link: [URL]
-Lý do chọn: Đây là lựa chọn hài hòa nhất. Nó có mức giá [hợp lý/rất tốt], điểm rating [cao/rất cao] và đã được [số lượng] khách hàng mua, cho thấy độ tin cậy từ người bán này.
-Lựa chọn TIẾT KIỆM nhất (Rẻ nhất):
-Sản phẩm: [Tên SP rẻ nhất]
-Thông tin: [Giá] VNĐ | [X.X] Sao | Đã bán: [Số lượng] | Bán bởi: [Tên người bán]
+
+Lý do ngắn gọn: Mức giá rất hợp lý so với số lượng bán và rating nhận được.
+
+🥉 Lựa chọn PHỔ BIẾN (Bán chạy nhất):
+
+Sản phẩm: [Tên SP]
+
+Giá: [Giá] VNĐ
+
+Thông tin: Đã bán: [Số lượng]
+
+Từ: [Tên người bán] (trên [Nền tảng])
+
 Link: [URL]
-Lý do chọn: Đây là sản phẩm có giá rẻ nhất. Tuy nhiên, bạn cần lưu ý rằng [rating/số lượng bán] của nó [cao/thấp] hơn so với các lựa chọn khác.
-Lựa chọn PHỔ BIẾN nhất (Bán chạy):
-Sản phẩm: [Tên SP bán chạy nhất]
-Thông tin: [Giá] VNĐ | [X.X] Sao | Đã bán: [Số lượng] | Bán bởi: [Tên người bán]
-Link: [URL]
-Lý do chọn: Nếu bạn ưu tiên sản phẩm được nhiều người tin dùng nhất, đây là lựa chọn hàng đầu với [số lượng] lượt bán. Mức giá của nó là [Giá], [cao hơn/tương đương] lựa chọn cân bằng.
-💡 LỜI KHUYÊN TỪ SOPHIE:
-Giá cả vs. Chất lượng: [Sản phẩm rẻ nhất] giúp tiết kiệm chi phí, nhưng [Sản phẩm cân bằng] có rating và số lượng bán tốt hơn, cho thấy độ ổn định cao hơn.
-Độ tin cậy: [Sản phẩm bán chạy nhất] là lựa chọn an toàn vì đã được kiểm chứng bởi nhiều người mua.
-Người bán: Các sản phẩm từ [Tên người bán của SP cân bằng] và [Tên người bán của SP bán chạy] có vẻ đáng tin cậy do có số lượt bán và đánh giá tốt. Bạn hãy luôn kiểm tra chính sách bảo hành/đổi trả nhé!
-Bối cảnh hiện có:
-{context}
+
+Lý do ngắn gọn: Ưu tiên hàng đầu nếu bạn cần sản phẩm đã được nhiều người tin dùng.
+Tôi đã sẵn sàng! Bạn chỉ cần cung cấp cho tôi dữ liệu các sản phẩm (phần {context}) mà bạn muốn tôi phân tích nhé. Tôi sẽ đưa ra so sánh và đề xuất nhanh gọn ngay.
 """
 
 price_comparison_chain = create_chain_with_template(price_comparison_template)
