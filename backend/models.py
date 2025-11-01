@@ -63,3 +63,25 @@ class Platform(BaseModel):
     url: str
     status: str
     created_at: str
+
+
+class ProductCreate(BaseModel):
+    name: str
+    price: Optional[float] = None
+    url: str
+    image: Optional[str] = None
+    rating: Optional[float] = None
+    review_count: Optional[int] = None
+    metadata: Optional[dict] = None
+
+
+class Product(BaseModel):
+    id: str
+    name: str
+    price: Optional[float] = None
+    url: str
+    image: Optional[str] = None
+    rating: Optional[float] = None
+    review_count: Optional[int] = None
+    metadata: Optional[dict] = None
+    created_at: str

@@ -6,6 +6,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const username = localStorage.getItem('username');
     document.getElementById('setting-username').textContent = `Tài khoản: ${username}`;
 
+    // Remove unwanted sections if present: "Quản lý dữ liệu" and "Giao diện"
+    // This makes the settings page hide those sections even if the HTML contains them.
+    try {
+        document.querySelectorAll('.setting-section').forEach(section => {
+            const h3 = section.querySelector('h3');
+            if (!h3) return;
+            const txt = h3.textContent.trim();
+            if (txt === 'Quản lý dữ liệu' || txt === 'Giao diện') {
+                section.remove();
+            }
+        });
+    } catch (e) {
+        // ignore if DOM structure is different
+        console.debug('setting.js: cleanup skipped', e);
+    }
+
     const form = document.getElementById('change-password-form');
     const msgEl = document.getElementById('setting-msg');
 

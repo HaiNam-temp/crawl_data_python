@@ -1,0 +1,45 @@
+Moodle (Modular Object-Oriented Dynamic Learning Environment) là một phần mềm nền tảng cho hệ thống quản lý học tập. Moodle được phát triển bởi Martin Dougiamas và phiên bản đầu tiên được công bố vào tháng 8/2002.
+
+Kiến trúc và tính năng của Moodle LMS
+
+Kiến trúc và các thành phần của Moodle LMS
+
+Kiến trúc của Moodle LMS
+Moodle được cấu trúc theo mô đun, gồm một lõi ứng dụng (core) được bao quanh bởi nhiều plugin (trình cắm hay mô đun bổ sung) để cung cấp chức năng cụ thể. Thiết kế mô đun cho phép mở rộng và tùy chỉnh cao mà không cần sửa đổi các thư viện lõi, thuận tiện cho việc nâng cấp lên các phiên bản mới.
+
+Các thành phần chính của Moodle bao gồm:
+- Moodle Core: thành phần lõi cung cấp các khung cơ sở hạ tầng cần thiết cho hệ thống quản lý học tập (LMS). Core xử lý xác thực người dùng, quản lý quyền, routing, template engine, APIs cho dữ liệu khóa học, người dùng và phân quyền.
+- Moodle Plugins: các mô đun phần mềm viết bằng PHP (kèm CSS, HTML, JavaScript) có thể cài đặt và tích hợp vào Moodle để bổ sung tính năng. Các loại plugin phổ biến: activity modules (bài tập, quiz), blocks (thanh công cụ), authentication plugins, enrolment plugins, report plugins, question types, và nhiều loại khác.
+- Database: Moodle lưu trữ cấu trúc khóa học, người dùng, bài tập, điểm số và cấu hình trong một cơ sở dữ liệu quan hệ (MySQL/MariaDB, PostgreSQL, v.v.).
+- File storage: hệ thống lưu trữ file (tài liệu, ảnh, media) có thể nằm trên filesystem hoặc dịch vụ lưu trữ ngoài (S3, CDN).
+- Web server / PHP runtime: Moodle chạy trên PHP và cần một web server (Apache, Nginx) cùng PHP-FPM; có thể triển khai trên container hoặc VM.
+- Themes & UI: Moodle hỗ trợ theme để tùy biến giao diện người dùng và trải nghiệm học tập.
+
+Tính năng chính của Moodle
+- Quản lý khóa học: tạo, tổ chức và quản lý khóa học, chương, bài học.
+- Quản lý người dùng & phân quyền: vai trò (teacher, student, admin), enrolment, nhóm.
+- Hoạt động tương tác: diễn đàn, quiz, assignment, workshop, bài trắc nghiệm.
+- Đánh giá & báo cáo: hệ thống chấm điểm, báo cáo tiến độ, xuất nhập dữ liệu.
+- Hệ sinh thái plugin phong phú: mở rộng tính năng thông qua plugin chính thức và plugin cộng đồng.
+- Tùy chỉnh và tích hợp: APIs cho LTI, REST web services để tích hợp với hệ thống khác (SSO, SIS, external tools).
+
+Áp dụng cho hệ thống priceCompose
+Đối với hệ thống priceCompose (hệ thống so sánh giá / quản lý sản phẩm và dữ liệu người dùng), Moodle có thể được xem như một nền tảng cung cấp các chức năng quản trị đào tạo, hướng dẫn sử dụng, và quản lý tri thức nội bộ. Một số cách áp dụng cụ thể:
+- Sử dụng Moodle làm cổng đào tạo nội bộ cho nhân viên: xây dựng khóa học hướng dẫn cách vận hành hệ thống priceCompose, quy trình thu thập dữ liệu, quy trình kiểm thử scraper, và quản trị dữ liệu.
+- Plugin chuyên biệt: phát triển plugin Moodle để kết nối trực tiếp tới dữ liệu sản phẩm của priceCompose (ví dụ: hiển thị danh sách sản phẩm, tạo quiz trắc nghiệm về thông số sản phẩm, hoặc báo cáo hiệu suất scraper). Plugin có thể sử dụng REST API của priceCompose để đọc/ghi dữ liệu.
+- Tổ chức ngân hàng câu hỏi và bài kiểm tra: chuyển các tình huống nghiệp vụ (case studies) liên quan đến so sánh giá vào Quiz/Assignment để đào tạo nhân viên kiểm thử và phân tích dữ liệu.
+- Quản trị quyền và vai trò: dùng cơ chế roles của Moodle để phân quyền cho các nhóm (QA, dev, content manager) truy cập nội dung đào tạo và báo cáo liên quan.
+- Hệ thống báo cáo & theo dõi: tích hợp báo cáo tiến độ học tập với hệ thống thông báo nội bộ của priceCompose để đảm bảo nhân viên hoàn thành các khoá cần thiết.
+
+Moodle Core cho priceCompose
+- Xác thực & SSO: tích hợp với hệ thống xác thực của priceCompose (SSO, LDAP, OAuth) để đồng bộ người dùng.
+- API & Web services: sử dụng REST APIs của Moodle để trao đổi dữ liệu giữa Moodle và priceCompose (ví dụ import user, báo cáo kết quả đào tạo).
+- Quản lý nội dung & tệp: lưu trữ tài liệu hướng dẫn, video demo, dữ liệu mẫu để nhân viên tham khảo.
+
+Moodle Plugins cho priceCompose
+- Activity plugins: tạo activity chuyên biệt để mô phỏng quy trình crawl, kiểm tra kết quả scraping và đánh dấu lỗi.
+- Local plugins / blocks: hiển thị trạng thái pipelines, liên kết nhanh tới dashboard priceCompose.
+- Report plugins: xuất báo cáo đào tạo, kết quả quiz, và liên kết tới ticket/issue của hệ thống.
+
+Kết chương
+Chương này đã giới thiệu khái quát về Moodle LMS, kiến trúc, các thành phần và tính năng chính của Moodle; đồng thời đề xuất các hướng ứng dụng cho hệ thống priceCompose. Moodle với mô hình mô đun và hệ sinh thái plugin phong phú là một nền tảng phù hợp để xây dựng hệ thống đào tạo nội bộ, quản trị tri thức, và tích hợp sâu với hệ thống quản lý dữ liệu như priceCompose. Việc phát triển các plugin chuyên biệt (activity, local, report) sẽ là bước tiếp theo để liên thông dữ liệu và quy trình đào tạo với hoạt động thực tế của hệ thống priceCompose.

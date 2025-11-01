@@ -27,11 +27,22 @@ embedding_function = OpenAIEmbeddings(
     openai_api_key=os.getenv("OPENAI_API_KEY"),
     model="text-embedding-ada-002"
 )
-products_vector_db = Chroma(
-    persist_directory=PRODUCTS_CHROMA_PATH,
-    embedding_function=embedding_function
-)
-products_retriever = products_vector_db.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+products_vector_db = None
+products_retriever = None
+try:
+    products_vector_db = Chroma(
+        persist_directory=PRODUCTS_CHROMA_PATH,
+        embedding_function=embedding_function
+    )
+    products_retriever = products_vector_db.as_retriever(search_type="similarity", search_kwargs={"k": 5})
+except Exception as e:
+    # Chroma (Rust bindings) can panic or fail to initialize on some systems
+    # (missing binary or incompatible wheel). Log the error and continue so
+    # the application can start; search-based chains will fall back to
+    # crawling when vector DB is unavailable.
+    logger.error("Failed to initialize Chroma vector DB: %s", str(e), exc_info=True)
+    products_vector_db = None
+    products_retriever = None
 
 
 def create_chain_with_template(system_template: str, human_template: str = "{question}"):

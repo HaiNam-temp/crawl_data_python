@@ -63,6 +63,10 @@ def get_chat_model():
 # import split functions from their new modules
 from create_chain_with_template import create_chain_with_template
 from Crawl_Data.crawl_tiki_product import crawl_tiki_product
+# The scrapers expose functions named with plural `_products` (they return lists).
+# Import the correct function names to avoid ImportError at startup.
+from Crawl_Data.scrape_cellphones_playwright import scrape_cellphones_products
+from Crawl_Data.scrape_dienthoaivui_playwright_search import scrape_dienthoaivui_products
 
 product_search_template = """
 Bạn là Sophie, trợ lý mua sắm chuyên phân tích sản phẩm.

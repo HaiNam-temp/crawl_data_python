@@ -226,7 +226,15 @@ async def chat(
     try:
         ai_response = process_user_query(chat_request.message)
     except Exception as e:
-        logger.error(f"Error processing query: {str(e)}")
+        # Log full exception with stack trace and context to help debugging
+        try:
+            logger.exception(
+                "Error processing query for conversation %s user %s: %s | message: %s",
+                conversation_id, current_user.get('username'), str(e), chat_request.message
+            )
+        except Exception:
+            # Fallback in case logger.exception itself fails
+            logger.error("Error processing query and failed to log exception details.", exc_info=True)
         ai_response = "Xin lỗi, đã có lỗi xảy ra khi xử lý yêu cầu của bạn."
     
     # Save AI response

@@ -11,7 +11,7 @@
     <aside class="sidebar" id="sidebar-container"></aside>
 
     <main class="main-content">
-        <h2>Trang Quản trị 🔒</h2>
+        <h2>Trang Quản trị</h2>
         
         <!-- Thống kê -->
         <div class="setting-section" style="max-width: 900px; margin-bottom: 30px;">
@@ -29,10 +29,6 @@
                     <h4 style="margin: 0; font-size: 2em; color: #d97706;" id="stat-messages">-</h4>
                     <p style="margin: 5px 0 0 0; color: #666;">Tin nhắn</p>
                 </div>
-                <div style="background: #fce7f3; padding: 20px; border-radius: 8px; text-align: center;">
-                    <h4 style="margin: 0; font-size: 2em; color: #db2777;" id="stat-platforms">-</h4>
-                    <p style="margin: 5px 0 0 0; color: #666;">Nền tảng</p>
-                </div>
             </div>
         </div>
 
@@ -46,30 +42,6 @@
 
         <hr>
 
-        <!-- Quản lý Platforms -->
-        <h3>🏪 Quản lý Nền tảng Crawl Dữ liệu</h3>
-
-        <div class="setting-section" style="max-width: 700px;">
-            <form id="new-platform-form">
-                <h4>Thêm nền tảng mới</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                    <div>
-                        <label for="platform-name">Tên nền tảng:</label>
-                        <input type="text" id="platform-name" placeholder="Ví dụ: Shopee" required>
-                    </div>
-                     <div>
-                        <label for="platform-url">Link trang chủ:</label>
-                        <input type="url" id="platform-url" placeholder="https://shopee.vn" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn" style="margin-top: 15px;">Thêm nền tảng</button>
-            </form>
-        </div>
-
-        <h4 style="margin-top: 30px;">Các nền tảng hiện tại</h4>
-        <div id="platform-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-            <p>Đang tải...</p>
-        </div>
     </main>
 
     <script src="js/global.js"></script>

@@ -19,6 +19,7 @@ load_dotenv()
 logger = get_logger(__name__)
 products_vector_db = get_vector_db()
 chat_model = get_chat_model()
+from backend.database import save_products
 def process_user_query(user_query: str) -> str:
     logger.info(f"User query: {user_query}")
     try:
@@ -48,20 +49,41 @@ def process_user_query(user_query: str) -> str:
         logger.info(f"Extracted product name: {product_name}")
 
         # 🔍 Bước 3: Tìm sản phẩm
-        search_result = product_search_chain.invoke(
-            {"question": product_name}
-        )
+        # product_search_chain may be either a chain-like object with an
+        # .invoke(...) method or a plain callable (fallback function). Handle
+        # both cases to avoid AttributeError when a simple function was
+        # returned during initialization.
+        def _call_chain(chain, inputs):
+            try:
+                if hasattr(chain, 'invoke') and callable(getattr(chain, 'invoke')):
+                    return chain.invoke(inputs)
+                elif callable(chain):
+                    return chain(inputs)
+                else:
+                    raise ValueError('Provided chain is not callable')
+            except Exception as e:
+                logger.error('Error invoking chain: %s', e, exc_info=True)
+                raise
+
+        search_result = _call_chain(product_search_chain, {"question": product_name})
         # If no relevant results found in vector database, crawl from all platforms
         if "tôi sẽ tìm kiếm" in search_result.lower():
             logger.info(f"Search result: {search_result}")
-            # Crawl từ tất cả platforms thay vì chỉ Tiki  
+            # Crawl từ tất cả platforms thay vì chỉ Tiki
             all_products = crawl_all_platforms(product_name, limit=None)
-            
-            if all_products:                         
+
+            # Persist crawled products to SQL database for long-term storage
+            try:
+                saved_count = save_products(all_products)
+                logger.info(f"Persisted {saved_count} products into SQL DB after crawling.")
+            except Exception as e:
+                logger.error(f"Error saving crawled products to SQL DB: {e}")
+
+            if all_products:
                 # Start price comparison immediately with crawled data
                 context_data = json.dumps(all_products, ensure_ascii=False)
                 try:
-                    comparison_result = price_comparison_chain({
+                    comparison_result = _call_chain(price_comparison_chain, {
                         "context": context_data,
                         "question": f"So sánh giá {product_name} từ các kết quả vừa tìm được"
                     })
